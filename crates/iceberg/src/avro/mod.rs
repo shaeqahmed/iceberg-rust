@@ -16,5 +16,6 @@
 // under the License.
 
 //! Avro related codes.
-mod schema;
-pub(crate) use schema::*;
+#[allow(dead_code)]
+pub mod schema;
+pub use schema::*;

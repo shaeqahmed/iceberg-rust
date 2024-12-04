@@ -22,7 +22,7 @@ use apache_avro::schema::{
     ArraySchema, DecimalSchema, FixedSchema, MapSchema, Name, RecordField as AvroRecordField,
     RecordFieldOrder, RecordSchema, UnionSchema,
 };
-use apache_avro::Schema as AvroSchema;
+pub use apache_avro::Schema as AvroSchema;
 use itertools::{Either, Itertools};
 use serde_json::{Number, Value};
 
@@ -45,6 +45,14 @@ const LOGICAL_TYPE: &str = "logicalType";
 
 struct SchemaToAvroSchema {
     schema: String,
+    next_rec_id: i32,
+}
+
+impl SchemaToAvroSchema {
+    fn next_record_id(&mut self) -> i32 {
+        self.next_rec_id += 1;
+        self.next_rec_id
+    }
 }
 
 type AvroSchemaOrField = Either<AvroSchema, AvroRecordField>;
@@ -74,7 +82,7 @@ impl SchemaVisitor for SchemaToAvroSchema {
     ) -> Result<AvroSchemaOrField> {
         let mut field_schema = avro_schema.unwrap_left();
         if let AvroSchema::Record(record) = &mut field_schema {
-            record.name = Name::from(format!("r{}", field.id).as_str());
+            record.name = Name::from(format!("r{}", if field.id > 0 { field.id.to_string() } else { self.next_record_id().to_string() }).as_str());
         }
 
         if !field.required {
@@ -121,7 +129,9 @@ impl SchemaVisitor for SchemaToAvroSchema {
         let mut field_schema = value.unwrap_left();
 
         if let AvroSchema::Record(record) = &mut field_schema {
-            record.name = Name::from(format!("r{}", list.element_field.id).as_str());
+            record.name = Name::from(format!("r{}", 
+                if list.element_field.id > 0 { list.element_field.id.to_string() } else { self.next_record_id().to_string() }
+            ).as_str());
         }
 
         if !list.element_field.required {
@@ -244,9 +254,10 @@ impl SchemaVisitor for SchemaToAvroSchema {
 }
 
 /// Converting iceberg schema to avro schema.
-pub(crate) fn schema_to_avro_schema(name: impl ToString, schema: &Schema) -> Result<AvroSchema> {
+pub fn schema_to_avro_schema(name: impl ToString, schema: &Schema) -> Result<AvroSchema> {
     let mut converter = SchemaToAvroSchema {
         schema: name.to_string(),
+        next_rec_id: 0,
     };
 
     visit_schema(schema, &mut converter).map(Either::unwrap_left)

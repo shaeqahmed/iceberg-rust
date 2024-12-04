@@ -516,10 +516,12 @@ impl fmt::Display for StructType {
 /// Fields may have an optional comment or doc string. Fields can have default values.
 pub struct NestedField {
     /// Id unique in table schema
+    #[serde(default)]
     pub id: i32,
     /// Field Name
     pub name: String,
     /// Optional or required
+    #[serde(default)]
     pub required: bool,
     /// Datatype
     pub field_type: Box<Type>,
@@ -534,8 +536,10 @@ pub struct NestedField {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 struct SerdeNestedField {
+    #[serde(default)]
     pub id: i32,
     pub name: String,
+    #[serde(default)]
     pub required: bool,
     #[serde(rename = "type")]
     pub field_type: Box<Type>,
@@ -726,7 +730,9 @@ pub(super) mod _serde {
         #[serde(rename_all = "kebab-case")]
         List {
             r#type: String,
+            #[serde(default)]
             element_id: i32,
+            #[serde(default)]
             element_required: bool,
             element: Cow<'a, Type>,
         },
